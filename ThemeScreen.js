@@ -28,7 +28,7 @@ const searchUrl = (word, lang) =>
 function WordChip({ word, typeLabel, accent, accentBg, accentBorder, isLandscape, lang }) {
   return (
     <TouchableOpacity
-      onPress={() => Linking.openURL(searchUrl(word, lang))}
+      onPress={() => Linking.openURL(searchUrl(word, lang)).catch(() => {})}
       style={{
         alignItems: 'center',
         backgroundColor: accentBg,

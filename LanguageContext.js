@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import * as FileSystem from 'expo-file-system/legacy';
+import { File, Paths } from 'expo-file-system';
 
-const LANG_FILE = FileSystem.documentDirectory + 'language.json';
+const langFile = new File(Paths.document, 'language.json');
 
 function detectDeviceLocale() {
   try {
@@ -20,9 +20,8 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const info = await FileSystem.getInfoAsync(LANG_FILE);
-        if (info.exists) {
-          const saved = JSON.parse(await FileSystem.readAsStringAsync(LANG_FILE));
+        if (langFile.exists) {
+          const saved = JSON.parse(await langFile.text());
           if (saved.lang === 'ja' || saved.lang === 'en') {
             setLangState(saved.lang);
             return;
@@ -37,7 +36,7 @@ export function LanguageProvider({ children }) {
   const setLang = useCallback(async (newLang) => {
     setLangState(newLang);
     try {
-      await FileSystem.writeAsStringAsync(LANG_FILE, JSON.stringify({ lang: newLang }));
+      langFile.write(JSON.stringify({ lang: newLang }));
     } catch {}
   }, []);
 

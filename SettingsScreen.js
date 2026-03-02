@@ -133,12 +133,19 @@ export default function SettingsScreen() {
             backgroundColor: 'rgba(255,255,255,0.04)',
             borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
             borderRadius: 14, paddingVertical: 14,
-            alignItems: 'center', marginBottom: 32,
+            alignItems: 'center', marginBottom: 12,
             flexDirection: 'row', justifyContent: 'center', gap: 8,
           }}
         >
           <Text style={{ fontSize: 16 }}>✉️</Text>
           <Text style={{ color: '#9ca3af', fontWeight: '600', fontSize: 14 }}>{L.settings.feedbackBtn}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => Alert.alert(L.settings.privacyTitle, L.settings.privacyMsg)}
+          style={{ alignItems: 'center', paddingVertical: 10, marginBottom: 24 }}
+        >
+          <Text style={{ color: '#555566', fontSize: 12, textDecorationLine: 'underline' }}>{L.settings.privacyBtn}</Text>
         </TouchableOpacity>
 
         {/* ── バージョン ── */}

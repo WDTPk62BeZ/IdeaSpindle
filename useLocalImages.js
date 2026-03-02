@@ -22,13 +22,22 @@ export default function useLocalImages() {
     if (!permission?.granted) return;
     setLoading(true);
     try {
-      const { assets } = await MediaLibrary.getAssetsAsync({
-        mediaType: MediaLibrary.MediaType.photo,
-        album: selectedAlbum ?? undefined,
-        first: 200,
-        sortBy: MediaLibrary.SortBy.creationTime,
-      });
-      setImages(assets);
+      let allAssets = [];
+      let after;
+      let hasMore = true;
+      while (hasMore) {
+        const result = await MediaLibrary.getAssetsAsync({
+          mediaType: MediaLibrary.MediaType.photo,
+          album: selectedAlbum ?? undefined,
+          first: 200,
+          after,
+          sortBy: MediaLibrary.SortBy.creationTime,
+        });
+        allAssets = allAssets.concat(result.assets);
+        hasMore = result.hasNextPage;
+        after = result.endCursor;
+      }
+      setImages(allAssets);
     } finally {
       setLoading(false);
     }

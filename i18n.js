@@ -73,6 +73,9 @@ export const strings = {
       feedbackBtn: 'フィードバックを送る',
       feedbackTitle: 'フィードバック',
       feedbackMsg: 'フィードバック機能は準備中です。\nご意見をお待ちしております。',
+      privacyBtn: 'プライバシーポリシー',
+      privacyTitle: 'プライバシーポリシー',
+      privacyMsg: 'プライバシーポリシーページは現在準備中です。',
     },
     dict: {
       title: '辞書管理',
@@ -180,6 +183,9 @@ export const strings = {
       feedbackBtn: 'Send Feedback',
       feedbackTitle: 'Feedback',
       feedbackMsg: 'Feedback feature is under development.\nWe look forward to your input.',
+      privacyBtn: 'Privacy Policy',
+      privacyTitle: 'Privacy Policy',
+      privacyMsg: 'The privacy policy page is currently under preparation.',
     },
     dict: {
       title: 'Dictionary',

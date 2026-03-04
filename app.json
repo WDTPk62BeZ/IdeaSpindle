@@ -46,8 +46,7 @@
           "photosPermission": "写真ライブラリへのアクセスを許可してください",
           "isAccessMediaLocationEnabled": false
         }
-      ],
-      "./plugins/withAndroidPermissions"
+      ]
     ],
     "extra": {
       "eas": {

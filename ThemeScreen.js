@@ -7,13 +7,15 @@ import useWordListsStorage from './useWordListsStorage';
 import SettingToggleButton from './SettingToggleButton';
 import { useLanguage } from './LanguageContext';
 import { useL } from './i18n';
+import usePersistedState from './usePersistedState';
 
 const SLIDE_TIME_OPTIONS_JA = [
-  {label:"30秒", seconds:30}, {label:"1分", seconds:60}, {label:"3分", seconds:180},
-  {label:"5分", seconds:300}, {label:"10分", seconds:600}];
+  {label:"30秒", seconds:30}, {label:"3分", seconds:180}, {label:"10分", seconds:600},
+  {label:"30分", seconds:1800}, {label:"１時間", seconds:3600}];
 const SLIDE_TIME_OPTIONS_EN = [
-  {label:"30s", seconds:30}, {label:"1m", seconds:60}, {label:"3m", seconds:180},
-  {label:"5m", seconds:300}, {label:"10m", seconds:600}];
+  {label:"30s", seconds:30}, {label:"3m", seconds:180}, {label:"10m", seconds:600},
+  {label:"30m", seconds:1800}, {label:"1h", seconds:3600}];
+
 
 const rand = (arr, exclude = -1) => {
   if (arr.length === 0) return 0;
@@ -61,17 +63,22 @@ export default function ThemeScreen() {
 
   const { verbs, nouns, loading, reload } = useWordListsStorage(lang);
 
-  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+  useFocusEffect(useCallback(() => {
+    reload();
+    setShowIntro(true);
+    setSettingsVisible(true);
+    return () => setPlaying(false);
+  }, [reload]));
 
   const [verbIdx, setVerbIdx] = useState(0);
   const [nounIdx, setNounIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [timeLimit, setTimeLimit] = useState(60);
+  const [showIntro, setShowIntro] = useState(true);
+  const [timeLimit, setTimeLimit] = usePersistedState('theme_timeLimit.json', 60);
   const [remaining, setRemaining] = useState(60);
   const [settingsVisible, setSettingsVisible] = useState(true);
   const animValue = useRef(new Animated.Value(1)).current;
 
-  // 辞書ロード完了後に初期インデックスをランダム設定
   useEffect(() => {
     if (verbs.length > 0 && nouns.length > 0) {
       setVerbIdx(rand(verbs));
@@ -96,8 +103,14 @@ export default function ThemeScreen() {
   }, [playing, remaining, next]);
 
   const togglePlay = () => {
-    if (!playing) { setRemaining(timeLimit); setPlaying(true); }
-    else setPlaying(false);
+    if (!playing) {
+      setShowIntro(false);
+      setRemaining(timeLimit);
+      setPlaying(true);
+      setSettingsVisible(false);
+    } else {
+      setPlaying(false);
+    }
   };
   const handleTime = (t) => { setTimeLimit(t); setRemaining(t); setPlaying(false); };
 
@@ -110,99 +123,169 @@ export default function ThemeScreen() {
     );
   }
 
-  // お題全体テキスト：英語は空白区切り、日本語は全角スペース区切り
   const themeText = lang === 'en'
     ? `"${verbs[verbIdx]} ${nouns[nounIdx]}"`
     : `「${verbs[verbIdx]}　${nouns[nounIdx]}」`;
 
-  return (
+  const settingsContent = (
     <>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: isLandscape ? 8 : 24, backgroundColor: '#0a0a0f' }}>
-        {playing && (
-          <View style={{ position: 'absolute', top: 16, right: 20 }}>
-            <CircleTimer value={remaining} max={timeLimit} size={52} />
-          </View>
-        )}
-        <Animated.View style={{
-          flexDirection: isLandscape ? 'row' : 'column',
-          alignItems: 'center',
-          gap: isLandscape ? 10 : 14,
-          width: '100%',
-          opacity: animValue,
-          transform: [
-            { translateY: animValue.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
-            { scale: animValue.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
-          ],
-        }}>
-          <View style={isLandscape ? { flex: 1 } : { width: '100%' }}>
-            <WordChip
-              word={verbs[verbIdx]}
-              typeLabel={L.theme.verbAdj}
-              accent="#63dcbe"
-              accentBg="rgba(99,220,190,0.12)"
-              accentBorder="rgba(99,220,190,0.35)"
-              isLandscape={isLandscape}
-              lang={lang}
-            />
-          </View>
-          <Text style={{ color: '#9c9c9c', fontSize: isLandscape ? 18 : 24, fontWeight: '300' }}>＋</Text>
-          <View style={isLandscape ? { flex: 1 } : { width: '100%' }}>
-            <WordChip
-              word={nouns[nounIdx]}
-              typeLabel={L.theme.noun}
-              accent="#a78bfa"
-              accentBg="rgba(167,139,250,0.12)"
-              accentBorder="rgba(167,139,250,0.35)"
-              isLandscape={isLandscape}
-              lang={lang}
-            />
-          </View>
-        </Animated.View>
-        <Animated.Text
-          style={{ marginTop: isLandscape ? 10 : 28, color: '#e9e9e9', fontSize: 40, letterSpacing: 1, opacity: animValue, width: '100%', textAlign: 'center' }}
-          adjustsFontSizeToFit
-          numberOfLines={1}
-          minimumFontScale={0.3}
+      <SettingRow label={L.theme.switchTime} options={timeOptions} value={timeLimit} onChange={handleTime} accent="#a78bfa" />
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <TouchableOpacity
+          onPress={togglePlay}
+          style={{ flex: 1, height: 50, borderRadius: 14, backgroundColor: playing ? '#ee5a24' : '#a78bfa', alignItems: 'center', justifyContent: 'center' }}
         >
-          {themeText}
-        </Animated.Text>
-        {!isLandscape && (
-          <View style={{ marginTop: 32, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 18, maxWidth: 300 }}>
-            <Text style={{ color: '#e9e9e9', fontSize: 12, lineHeight: 20, textAlign: 'center' }}>
-              {L.theme.tapHint}<Text style={{ color: '#63dcbe' }}>{L.theme.tapHintAccent}</Text>{L.theme.tapHint2}
-            </Text>
-          </View>
-        )}
-      </View>
-      {/* ボトムパネル */}
-      <View style={{
-        backgroundColor: settingsVisible ? '#0a0a0f' : 'transparent',
-        borderTopWidth: settingsVisible ? 1 : 0,
-        borderTopColor: 'rgba(255,255,255,0.06)',
-        paddingBottom: settingsVisible ? (isLandscape ? 10 : 22) : 0,
-        paddingHorizontal: 20,
-      }}>
-        <SettingToggleButton settingsVisible={settingsVisible} setSettingsVisible={setSettingsVisible} />
-        {settingsVisible && (
-          <View style={{ backgroundColor: '#0a0a0f', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 12, paddingBottom: isLandscape ? 8 : 24, paddingHorizontal: 20 }}>
-            <SettingRow label={L.theme.switchTime} options={timeOptions} value={timeLimit} onChange={handleTime} accent="#a78bfa" />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity
-                onPress={togglePlay}
-                style={{ flex: 1, height: 50, borderRadius: 14, backgroundColor: playing ? '#ee5a24' : '#a78bfa', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{playing ? L.theme.stop : L.theme.start}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={next}
-                style={{ width: 50, height: 50, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Text style={{ color: '#fff', fontSize: 20 }}>⏭</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{playing ? L.theme.stop : L.theme.start}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={next}
+          style={{ width: 50, height: 50, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text style={{ color: '#fff', fontSize: 20 }}>⏭</Text>
+        </TouchableOpacity>
       </View>
     </>
+  );
+
+  return (
+    <View style={{ flex: 1, flexDirection: isLandscape ? 'row' : 'column', backgroundColor: '#0a0a0f' }}>
+      {/* メインコンテンツエリア */}
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: isLandscape ? 8 : 24 }}>
+        {showIntro ? (
+          <TouchableOpacity
+            onPress={togglePlay}
+            activeOpacity={1}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'rgba(10,10,15,0.88)',
+              gap: 12, padding: 24,
+            }}
+          >
+            <Text style={{ fontSize: 52 }}>🎲</Text>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>{L.tabs.theme}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', lineHeight: 20 }}>{L.theme.introHint}</Text>
+            <TouchableOpacity
+              onPress={togglePlay}
+              style={{ height: 50, borderRadius: 14, backgroundColor: '#a78bfa', margin: 12, padding: 12, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{ L.theme.start}</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ):(
+          <>
+          {playing && (
+            <View style={{ position: 'absolute', top: 16, right: 20 }}>
+              <CircleTimer value={remaining} max={timeLimit} size={52} />
+            </View>
+          )}
+          <Animated.View style={{
+            flexDirection: isLandscape ? 'row' : 'column',
+            alignItems: 'center',
+            gap: isLandscape ? 10 : 14,
+            width: '100%',
+            opacity: animValue,
+            transform: [
+              { translateY: animValue.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+              { scale: animValue.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+            ],
+          }}>
+            <View style={isLandscape ? { flex: 1 } : { width: '100%' }}>
+              <WordChip
+                word={verbs[verbIdx]}
+                typeLabel={L.theme.verbAdj}
+                accent="#63dcbe"
+                accentBg="rgba(99,220,190,0.12)"
+                accentBorder="rgba(99,220,190,0.35)"
+                isLandscape={isLandscape}
+                lang={lang}
+              />
+            </View>
+            <Text style={{ color: '#9c9c9c', fontSize: isLandscape ? 18 : 24, fontWeight: '300' }}>＋</Text>
+            <View style={isLandscape ? { flex: 1 } : { width: '100%' }}>
+              <WordChip
+                word={nouns[nounIdx]}
+                typeLabel={L.theme.noun}
+                accent="#a78bfa"
+                accentBg="rgba(167,139,250,0.12)"
+                accentBorder="rgba(167,139,250,0.35)"
+                isLandscape={isLandscape}
+                lang={lang}
+              />
+            </View>
+            </Animated.View>
+                    <Animated.Text
+            style={{ marginTop: isLandscape ? 10 : 28, color: '#e9e9e9', fontSize: 40, letterSpacing: 1, opacity: animValue, width: '100%', textAlign: 'center' }}
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            minimumFontScale={0.3}
+          >
+            {themeText}
+          </Animated.Text>
+          {!isLandscape && (
+            <View style={{ marginTop: 32, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingVertical: 10, paddingHorizontal: 18, maxWidth: 300 }}>
+              <Text style={{ color: '#e9e9e9', fontSize: 12, lineHeight: 20, textAlign: 'center' }}>
+                {L.theme.tapHint}<Text style={{ color: '#63dcbe' }}>{L.theme.tapHintAccent}</Text>{L.theme.tapHint2}
+              </Text>
+            </View>
+          )}
+         </>
+        )}
+
+      </View>
+
+      {/* 設定パネル */}
+      {isLandscape ? (
+        <View style={{
+          width: settingsVisible ? 240 : 0,
+          backgroundColor: '#0a0a0f',
+          borderLeftWidth: settingsVisible ? 1 : 0,
+          borderLeftColor: 'rgba(255,255,255,0.06)',
+          overflow: 'hidden',
+          justifyContent: 'center',
+          paddingHorizontal: settingsVisible ? 16 : 0,
+          paddingVertical: 16,
+        }}>
+          {settingsVisible && settingsContent}
+        </View>
+      ) : (
+        <View style={{
+          backgroundColor: settingsVisible ? '#0a0a0f' : 'transparent',
+          borderTopWidth: settingsVisible ? 1 : 0,
+          borderTopColor: 'rgba(255,255,255,0.06)',
+          paddingBottom: settingsVisible ? 22 : 0,
+          paddingHorizontal: 20,
+        }}>
+          <SettingToggleButton settingsVisible={settingsVisible} setSettingsVisible={setSettingsVisible} />
+          {settingsVisible && settingsContent}
+        </View>
+      )}
+
+      {/* 横画面トグルボタン */}
+      {isLandscape && (
+        <TouchableOpacity
+          onPress={() => setSettingsVisible(v => !v)}
+          style={{
+            position: 'absolute',
+            right: settingsVisible ? 240 : 0,
+            top: '50%',
+            marginTop: -24,
+            width: 20,
+            height: 48,
+            backgroundColor: '#1c1c2e',
+            borderTopLeftRadius: 8,
+            borderBottomLeftRadius: 8,
+            borderWidth: 1,
+            borderRightWidth: 0,
+            borderColor: 'rgba(255,255,255,0.12)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10,
+          }}
+        >
+          <Text style={{ color: '#cacaca', fontSize: 10 }}>{settingsVisible ? '▶' : '◀'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }

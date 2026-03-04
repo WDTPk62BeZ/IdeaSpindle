@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import CircleTimer from './CircleTimer';
 import SettingRow from './SettingRow';
 import useLocalImages from './useLocalImages';
@@ -7,19 +8,20 @@ import AlbumPickerModal from './AlbumPickerModal';
 import SettingToggleButton from './SettingToggleButton';
 import { useLanguage } from './LanguageContext';
 import { useL } from './i18n';
+import usePersistedState from './usePersistedState';
 
 const VIEW_TIME_OPTIONS_JA = [
-  {label:"30秒", seconds:30}, {label:"1分", seconds:60}, {label:"3分", seconds:180},
-  {label:"5分", seconds:300}, {label:"10分", seconds:600}];
+  {label:"30秒", seconds:30}, {label:"3分", seconds:180}, {label:"10分", seconds:600},
+  {label:"30分", seconds:1800}, {label:"１時間", seconds:3600}];
 const VIEW_TIME_OPTIONS_EN = [
-  {label:"30s", seconds:30}, {label:"1m", seconds:60}, {label:"3m", seconds:180},
-  {label:"5m", seconds:300}, {label:"10m", seconds:600}];
+  {label:"30s", seconds:30}, {label:"3m", seconds:180}, {label:"10m", seconds:600},
+  {label:"30m", seconds:1800}, {label:"1h", seconds:3600}];
 const BLANK_TIME_OPTIONS_JA = [
-  {label:"30秒", seconds:30}, {label:"1分", seconds:60}, {label:"3分", seconds:180},
-  {label:"5分", seconds:300}, {label:"10分", seconds:600}];
+  {label:"30秒", seconds:30}, {label:"3分", seconds:180}, {label:"10分", seconds:600},
+  {label:"30分", seconds:1800}, {label:"１時間", seconds:3600}];
 const BLANK_TIME_OPTIONS_EN = [
-  {label:"30s", seconds:30}, {label:"1m", seconds:60}, {label:"3m", seconds:180},
-  {label:"5m", seconds:300}, {label:"10m", seconds:600}];
+  {label:"30s", seconds:30}, {label:"3m", seconds:180}, {label:"10m", seconds:600},
+  {label:"30m", seconds:1800}, {label:"1h", seconds:3600}];
 
 const rand = (arr, exclude = -1) => {
   if (arr.length === 0) return 0;
@@ -40,8 +42,8 @@ export default function MemoryScreen() {
 
   const [phase, setPhase] = useState(PHASE.IDLE);
   const [idx, setIdx] = useState(0);
-  const [viewTime, setViewTime] = useState(60);
-  const [blankTime, setBlankTime] = useState(120);
+  const [viewTime, setViewTime] = usePersistedState('memory_viewTime.json', 60);
+  const [blankTime, setBlankTime] = usePersistedState('memory_blankTime.json', 120);
   const [remaining, setRemaining] = useState(0);
   const [imgVisible, setImgVisible] = useState(false);
   const [blurAmount, setBlurAmount] = useState(0);
@@ -51,7 +53,7 @@ export default function MemoryScreen() {
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
-  const { images, albums, selectedAlbum, setSelectedAlbum, loading, permission, requestPermission } = useLocalImages();
+  const { images, albums, selectedAlbum, setSelectedAlbum, loading, permission, requestPermission } = useLocalImages('memory');
 
   useEffect(() => {
     if (images.length > 0) {
@@ -75,9 +77,7 @@ export default function MemoryScreen() {
           setRemaining(blankTime);
         }, 600);
       } else if (phase === PHASE.BLANK) {
-        setImgVisible(true);
-        setPeekVisible(false);
-        setPhase(PHASE.DONE);
+        startRound();
       }
       return;
     }
@@ -103,6 +103,20 @@ export default function MemoryScreen() {
     setImgVisible(true);
     setRemaining(viewTime);
     setSettingsVisible(false);
+  };
+
+  useFocusEffect(useCallback(() => {
+    return () => {
+      setPhase(PHASE.IDLE);
+      setImgVisible(false);
+      setBlurAmount(0);
+      setPeekVisible(false);
+      setSettingsVisible(true);
+    };
+  }, []));
+
+  const handleSkip = () => {
+    startRound();
   };
 
   const handleReset = () => {
@@ -139,17 +153,6 @@ export default function MemoryScreen() {
     );
   }
 
-  if (images.length === 0) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, backgroundColor: '#0a0a0f' }}>
-        <Text style={{ fontSize: 48 }}>🖼️</Text>
-        <Text style={{ color: '#fff', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
-          {L.common.noImages}
-        </Text>
-      </View>
-    );
-  }
-
   const img = images[idx] ?? images[0];
 
   const accentColor = phase === PHASE.VIEWING ? '#f59e0b'
@@ -161,12 +164,12 @@ export default function MemoryScreen() {
     <>
       <View pointerEvents={phase === PHASE.IDLE ? 'auto' : 'none'} style={{ opacity: phase === PHASE.IDLE ? 1 : 0.4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <Text style={{ color: '#fff', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', minWidth: 64, color:'#fff' }}>{L.common.album}</Text>
+          <Text style={{ color: '#fff', fontSize: 18, letterSpacing: 0.5, textTransform: 'uppercase', minWidth: 64, color:'#fff' }}>{L.common.album}</Text>
           <TouchableOpacity
             onPress={() => setAlbumModalVisible(true)}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
           >
-            <Text style={{ color: '#e879f9', fontSize: 12, fontWeight: '600' }}>
+            <Text style={{ color: '#e879f9', fontSize: 18, fontWeight: '600' }}>
               {selectedAlbum ? selectedAlbum.title : L.common.allPhotos}
             </Text>
             <Text style={{ color: '#e879f9', fontSize: 10 }}>▼</Text>
@@ -227,6 +230,19 @@ export default function MemoryScreen() {
               <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{L.memory.nextBtn}</Text>
             </TouchableOpacity>
           )}
+          {(phase === PHASE.VIEWING || phase === PHASE.BLANK) && (
+            <TouchableOpacity
+              onPress={handleSkip}
+              style={{
+                width: 50, height: 50, borderRadius: 14,
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 20 }}>⏭</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </>
@@ -235,41 +251,72 @@ export default function MemoryScreen() {
   return (
     <View style={{ flex: 1, flexDirection: isLandscape ? 'row' : 'column', backgroundColor: '#111116' }}>
       {/* 画像 / ブランクエリア */}
-      <View style={{ flex: 1, overflow: 'hidden', backgroundColor: '#111116' }}>
-        <Image
-          source={{ uri: img.uri }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: (imgVisible || peekVisible) ? 1 : 0 }}
-          resizeMode="contain"
-          blurRadius={blurAmount}
-        />
-
-        {phase === PHASE.BLANK && !peekVisible && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
-            <Text style={{ fontSize: 52 }}>✏️</Text>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 27 }}>
-              {L.memory.blankInstruction}<Text style={{ color: '#fb7185' }}>{L.memory.blankAccent}</Text>{L.memory.blankInstruction2}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, textAlign: 'center', lineHeight: 20 }}>
-              {L.memory.blankHint}
+        {images.length === 0 ? (      
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, backgroundColor: '#0a0a0f' }}>
+            <Text style={{ fontSize: 48 }}>🖼️</Text>
+            <Text style={{ color: '#fff', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+              {L.common.noImages}
             </Text>
           </View>
-        )}
+        ) : (    
+          <View style={{ flex: 1, overflow: 'hidden', backgroundColor: '#111116' }}>
+            <Image
+              source={{ uri: img.uri }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: (imgVisible || peekVisible) ? 1 : 0 }}
+              resizeMode="contain"
+              blurRadius={blurAmount}
+            />
+            {phase === PHASE.BLANK && !peekVisible && (
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+                <Text style={{ fontSize: 52 }}>✏️</Text>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center', lineHeight: 27 }}>
+                  {L.memory.blankInstruction}<Text style={{ color: '#fb7185' }}>{L.memory.blankAccent}</Text>{L.memory.blankInstruction2}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, textAlign: 'center', lineHeight: 20 }}>
+                  {L.memory.blankHint}
+                </Text>
+              </View>
+            )}
 
-        {phase === PHASE.IDLE && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 48 }}>🧠</Text>
-            <Text style={{ color: '#cacaca', fontSize: 14, textAlign: 'center', lineHeight: 24 }}>
-              {L.memory.idleHint}
-            </Text>
+            {phase === PHASE.IDLE && (
+              <TouchableOpacity
+                onPress={handleStart}
+                activeOpacity={1}
+                style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: 'rgba(10,10,15,0.88)',
+                  gap: 12, padding: 24,
+                }}
+              >
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                  <Text style={{ fontSize: 48 }}>🧠</Text>
+                  <Text style={{ color: '#cacaca', fontSize: 14, textAlign: 'center', lineHeight: 24 }}>
+                    {L.memory.idleHint}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleStart}
+                    style={{
+                      height: 50, borderRadius: 14, backgroundColor: '#a855f7',
+                      alignItems: 'center', justifyContent: 'center',
+                      margin: 12, padding: 12
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{L.memory.startBtn}</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <View style={{ position: 'absolute', top: 16, right: 16 }}>
+              {(phase === PHASE.VIEWING || phase === PHASE.BLANK) && (
+                <CircleTimer value={remaining} max={phase === PHASE.VIEWING ? viewTime : blankTime} colorOverride={accentColor} />
+              )}
+            </View>
           </View>
-        )}
+          )
+        }
 
-        <View style={{ position: 'absolute', top: 16, right: 16 }}>
-          {(phase === PHASE.VIEWING || phase === PHASE.BLANK) && (
-            <CircleTimer value={remaining} max={phase === PHASE.VIEWING ? viewTime : blankTime} size={40} colorOverride={accentColor} />
-          )}
-        </View>
-      </View>
 
       {isLandscape ? (
         <View style={{

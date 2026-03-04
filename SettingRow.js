@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, Keyboard } from 'react-native';
+import { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Modal, TextInput, Keyboard, InteractionManager } from 'react-native';
 import { useL } from './i18n';
 
 export const formatSeconds = (secs) => {
@@ -11,6 +11,7 @@ export const formatSeconds = (secs) => {
 
 export default function SettingRow({ label, options, value, onChange, accent = '#63dcbe' }) {
   const L = useL();
+  const inputRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [customSeconds, setCustomSeconds] = useState(null);
   const [inputText, setInputText] = useState('');
@@ -72,7 +73,7 @@ export default function SettingRow({ label, options, value, onChange, accent = '
         </View>
       </View>
 
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)} onShow={() => InteractionManager.runAfterInteractions(() => inputRef.current?.focus())}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.65)' }}>
           <View style={{ width: 290, backgroundColor: '#1a1a2e', borderRadius: 20, padding: 24, gap: 16 }}>
             <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center' }}>
@@ -83,11 +84,11 @@ export default function SettingRow({ label, options, value, onChange, accent = '
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <TextInput
+                ref={inputRef}
                 style={{ color: '#fff', fontSize: 44, fontWeight: '700', textAlign: 'right', minWidth: 90 }}
                 keyboardType="number-pad"
                 value={inputText}
                 onChangeText={setInputText}
-                autoFocus
                 selectTextOnFocus
                 placeholder="0"
                 placeholderTextColor="#333"

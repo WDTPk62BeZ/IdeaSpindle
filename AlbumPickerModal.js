@@ -1,8 +1,10 @@
 import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useL } from './i18n';
 
 export default function AlbumPickerModal({ visible, albums, selectedAlbum, onSelect, onClose, accent = '#63dcbe' }) {
   const L = useL();
+  const insets = useSafeAreaInsets();
   const allPhotosItem = { id: null, title: L.common.allPhotos };
   const items = [allPhotosItem, ...albums];
 
@@ -13,13 +15,14 @@ export default function AlbumPickerModal({ visible, albums, selectedAlbum, onSel
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1a1a2e', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1a1a2e', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingLeft: insets.left, paddingRight: insets.right }}>
           <View style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' }}>
             <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>{L.albumPicker.title}</Text>
           </View>
           <FlatList
             data={items}
             keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={{ paddingBottom: insets.bottom }}
             renderItem={({ item }) => {
               const isSelected = selectedAlbum?.id === item.id || (!selectedAlbum && item.id === null);
               return (

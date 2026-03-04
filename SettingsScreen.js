@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, ScrollView,
-  Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Linking, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import useWordListsStorage from './useWordListsStorage';
 import DictionaryModal from './DictionaryModal';
@@ -106,29 +106,10 @@ export default function SettingsScreen() {
 
         <Divider />
 
-        {/* ── プレミアム ── */}
-        <SectionLabel title={L.settings.premiumSection} />
-        <TouchableOpacity
-          onPress={() => Alert.alert(L.settings.premiumTitle, L.settings.premiumMsg)}
-          style={{
-            backgroundColor: 'rgba(251,191,36,0.08)',
-            borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)',
-            borderRadius: 14, paddingVertical: 16,
-            alignItems: 'center', marginBottom: 24,
-          }}
-        >
-          <Text style={{ color: '#fbbf24', fontWeight: '700', fontSize: 15 }}>{L.settings.premiumBtn}</Text>
-          <Text style={{ color: 'rgba(251,191,36,0.45)', fontSize: 12, marginTop: 4 }}>
-            {L.settings.premiumSub}
-          </Text>
-        </TouchableOpacity>
-
-        <Divider />
-
         {/* ── サポート ── */}
         <SectionLabel title={L.settings.supportSection} />
         <TouchableOpacity
-          onPress={() => Alert.alert(L.settings.feedbackTitle, L.settings.feedbackMsg)}
+          onPress={() => Linking.openURL('mailto:tenmetsusoft@gmail.com').catch(() => {})}
           style={{
             backgroundColor: 'rgba(255,255,255,0.04)',
             borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
@@ -142,7 +123,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => Alert.alert(L.settings.privacyTitle, L.settings.privacyMsg)}
+          onPress={() => Linking.openURL('https://tenmetsusoft.github.io/#privacy').catch(() => {})}
           style={{ alignItems: 'center', paddingVertical: 10, marginBottom: 24 }}
         >
           <Text style={{ color: '#555566', fontSize: 12, textDecorationLine: 'underline' }}>{L.settings.privacyBtn}</Text>

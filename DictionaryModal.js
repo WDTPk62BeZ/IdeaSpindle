@@ -3,6 +3,7 @@ import {
   Modal, View, Text, TouchableOpacity, TextInput,
   FlatList, Alert, Platform, KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useL } from './i18n';
 
 const PAGE_SIZE = 40;
@@ -19,6 +20,7 @@ export default function DictionaryModal({
   onResetVerbs, onResetNouns,
 }) {
   const L = useL();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('verb');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -142,6 +144,8 @@ export default function DictionaryModal({
           height: "78%",
           borderWidth: 1, borderBottomWidth: 0,
           borderColor: 'rgba(255,255,255,0.08)',
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
         }}>
           {/* ── ヘッダー ── */}
           <View style={{
@@ -338,8 +342,7 @@ export default function DictionaryModal({
             </View>
           )}
 
-          {/* iOS セーフエリア */}
-          <View style={{ height: Platform.OS === 'ios' ? 28 : 16 }} />
+          <View style={{ height: Math.max(insets.bottom, 16) }} />
         </View>
       </KeyboardAvoidingView>
     </Modal>

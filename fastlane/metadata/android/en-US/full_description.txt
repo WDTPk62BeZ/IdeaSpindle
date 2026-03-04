@@ -1,0 +1,19 @@
+IdeaSpindle is a creative thinking training app with three modes that make use of your everyday photos.
+
+[Slideshow]
+Display photos from your device library with a timer. Filter by album and customize the display interval from 30 seconds to 10 minutes.
+
+[Memory Training]
+View a photo for a set time, then try to recall it after it's hidden. Both the viewing duration and blank duration are independently configurable.
+
+[Theme Generator]
+Random verb and noun combinations present creative prompts. Flip through them on a timer to expand your thinking. You can add and edit words in the dictionary from the settings screen.
+
+[Key Features]
+· Filter photos by album
+· Settings saved between sessions
+· Japanese / English display
+· Customizable word dictionary
+· Tablet and landscape support
+
+No ads, no purchases, no internet connection required.

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import CircleTimer from './CircleTimer';
 import SettingRow from './SettingRow';
 import useLocalImages from './useLocalImages';
@@ -7,13 +8,14 @@ import AlbumPickerModal from './AlbumPickerModal';
 import SettingToggleButton from './SettingToggleButton';
 import { useLanguage } from './LanguageContext';
 import { useL } from './i18n';
+import usePersistedState from './usePersistedState';
 
 const SLIDE_TIME_OPTIONS_JA = [
-  {label:"30秒", seconds:30}, {label:"1分", seconds:60}, {label:"3分", seconds:180},
-  {label:"5分", seconds:300}, {label:"10分", seconds:600}];
+  {label:"30秒", seconds:30}, {label:"3分", seconds:180}, {label:"10分", seconds:600},
+  {label:"30分", seconds:1800}, {label:"１時間", seconds:3600}];
 const SLIDE_TIME_OPTIONS_EN = [
-  {label:"30s", seconds:30}, {label:"1m", seconds:60}, {label:"3m", seconds:180},
-  {label:"5m", seconds:300}, {label:"10m", seconds:600}];
+  {label:"30s", seconds:30}, {label:"3m", seconds:180}, {label:"10m", seconds:600},
+  {label:"30m", seconds:1800}, {label:"1h", seconds:3600}];
 
 const rand = (arr, exclude = -1) => {
   if (arr.length === 0) return 0;
@@ -31,13 +33,14 @@ export default function SlideShowScreen() {
 
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [timeLimit, setTimeLimit] = useState(60);
+  const [showIntro, setShowIntro] = useState(true);
+  const [timeLimit, setTimeLimit] = usePersistedState('slideshow_timeLimit.json', 60);
   const [remaining, setRemaining] = useState(60);
   const [albumModalVisible, setAlbumModalVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const { images, albums, selectedAlbum, setSelectedAlbum, loading, permission, requestPermission } = useLocalImages();
+  const { images, albums, selectedAlbum, setSelectedAlbum, loading, permission, requestPermission } = useLocalImages('slideshow');
 
   useEffect(() => {
     if (images.length > 0) {
@@ -62,10 +65,22 @@ export default function SlideShowScreen() {
     return () => clearTimeout(t);
   }, [playing, remaining, next]);
 
+  useFocusEffect(useCallback(() => {
+    setShowIntro(true);
+    setSettingsVisible(true);
+    return () => setPlaying(false);
+  }, []));
+
   const togglePlay = () => {
     if (images.length === 0) return;
-    if (!playing) { setRemaining(timeLimit); setPlaying(true); }
-    else setPlaying(false);
+    if (!playing) {
+      setShowIntro(false);
+      setRemaining(timeLimit);
+      setPlaying(true);
+      setSettingsVisible(false);
+    } else {
+      setPlaying(false);
+    }
   };
   const handleTime = (t) => { setTimeLimit(t); setRemaining(t); setPlaying(false); };
 
@@ -96,28 +111,17 @@ export default function SlideShowScreen() {
     );
   }
 
-  if (images.length === 0) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, backgroundColor: '#0a0a0f' }}>
-        <Text style={{ fontSize: 48 }}>🖼️</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
-          {L.common.noImages}
-        </Text>
-      </View>
-    );
-  }
-
   const img = images[idx] ?? images[0];
 
   const settingsContent = (
     <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <Text style={{ color: '#fff', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', minWidth: 64 }}>{L.common.album}</Text>
+        <Text style={{ color: '#fff', fontSize: 18, letterSpacing: 0.5, textTransform: 'uppercase', minWidth: 64 }}>{L.common.album}</Text>
         <TouchableOpacity
           onPress={() => setAlbumModalVisible(true)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
         >
-          <Text style={{ color: '#63dcbe', fontSize: 12, fontWeight: '600' }}>
+          <Text style={{ color: '#63dcbe', fontSize: 18, fontWeight: '600' }}>
             {selectedAlbum ? selectedAlbum.title : L.common.allPhotos}
           </Text>
           <Text style={{ color: '#63dcbe', fontSize: 10 }}>▼</Text>
@@ -154,18 +158,59 @@ export default function SlideShowScreen() {
   return (
     <View style={{ flex: 1, flexDirection: isLandscape ? 'row' : 'column', backgroundColor: '#111116' }}>
       {/* 画像エリア */}
-      <View style={{ flex: 1, overflow: 'hidden' }}>
-        <Animated.Image
-          source={{ uri: img.uri }}
-          style={{ width: '100%', height: '100%', opacity: fadeAnim }}
-          resizeMode="contain"
-        />
-        {playing && (
-          <View style={{ position: 'absolute', top: 16, right: 16 }}>
-            <CircleTimer value={remaining} max={timeLimit} />
-          </View>
-        )}
-      </View>
+      {images.length === 0 ? (      
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, backgroundColor: '#0a0a0f' }}>
+          <Text style={{ fontSize: 48 }}>🖼️</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center', lineHeight: 22 }}>
+            {L.common.noImages}
+          </Text>
+        </View>
+      ) : (    
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          {showIntro ? (
+            <TouchableOpacity
+              onPress={togglePlay}
+              activeOpacity={1}
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: 'rgba(10,10,15,0.88)',
+                gap: 12, padding: 24,
+              }}
+            >
+              <Text style={{ fontSize: 52 }}>📷</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>{L.tabs.slides}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', lineHeight: 20 }}>{L.slideshow.introHint}</Text>
+              <TouchableOpacity
+                onPress={togglePlay}
+                style={{
+                  height: 50, borderRadius: 14,
+                  backgroundColor: '#63dcbe',
+                  alignItems: 'center', justifyContent: 'center',
+                  margin: 12, padding: 12, 
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{ L.slideshow.start}</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ):(
+            <>
+              <Animated.Image
+                source={{ uri: img.uri }}
+                style={{ width: '100%', height: '100%', opacity: fadeAnim }}
+                resizeMode="contain"
+              />
+              {playing && (
+                <View style={{ position: 'absolute', top: 16, right: 16 }}>
+                  <CircleTimer value={remaining} max={timeLimit} />
+                </View>
+              )}
+            </>
+          )}
+
+        </View>
+        )
+      }
 
       {isLandscape ? (
         <View style={{

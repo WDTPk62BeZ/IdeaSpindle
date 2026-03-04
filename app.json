@@ -34,7 +34,7 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE"
       ],
-      "package": "com.athanor.IdeaSpindle"
+      "package": "com.tenmetsusoft.IdeaSpindle"
     },
     "web": {
       "favicon": "./assets/favicon.png"
